@@ -1,0 +1,721 @@
+#!/bin/bash
+function select_option {
+
+    # little helpers for terminal print control and key input
+    ESC=$( printf "\033")
+    cursor_blink_on()  { printf "$ESC[?25h"; }
+    cursor_blink_off() { printf "$ESC[?25l"; }
+    cursor_to()        { printf "$ESC[$1;${2:-1}H"; }
+    print_option()     { printf "   $1 "; }
+    print_selected()   { printf "  $ESC[7m $1 $ESC[27m"; }
+    get_cursor_row()   { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${ROW#*[}; }
+    key_input()        { read -s -n3 key 2>/dev/null >&2
+                         if [[ $key = $ESC[A ]]; then echo up;    fi
+                         if [[ $key = $ESC[B ]]; then echo down;  fi
+                         if [[ $key = ""     ]]; then echo enter; fi; }
+
+    # initially print empty new lines (scroll down if at bottom of screen)
+    for opt; do printf "\n"; done
+
+    # determine current screen position for overwriting the options
+    local lastrow=`get_cursor_row`
+    local startrow=$(($lastrow - $#))
+
+    # ensure cursor and input echoing back on upon a ctrl+c during read -s
+    trap "cursor_blink_on; stty echo; printf '\n'; exit" 2
+    cursor_blink_off
+
+    local selected=0
+    while true; do
+        # print options by overwriting the last lines
+        local idx=0
+        for opt; do
+            cursor_to $(($startrow + $idx))
+            if [ $idx -eq $selected ]; then
+                print_selected "$opt"
+            else
+                print_option "$opt"
+            fi
+            ((idx++))
+        done
+
+        # user key control
+        case `key_input` in
+            enter) break;;
+            up)    ((selected--));
+                   if [ $selected -lt 0 ]; then selected=$(($# - 1)); fi;;
+            down)  ((selected++));
+                   if [ $selected -ge $# ]; then selected=0; fi;;
+        esac
+    done
+
+    # cursor position back to normal
+    cursor_to $lastrow
+    printf "\n"
+    cursor_blink_on
+
+    return $selected
+}
+
+function select_opt {
+    select_option "$@" 1>&2
+    local result=$?
+    echo $result
+    return $result
+}
+
+
+
+
+
+
+
+
+
+
+# ____  _____    _    _          _       ____    _    ____  ____  
+#|  _ \| ____|  / \  | |        / \     / ___|  / \  |  _ \|  _ \ 
+#| | | |  _|   / _ \ | |       / _ \   | |     / _ \ | |_) | | | |
+#| |_| | |___ / ___ \| |___   / ___ \  | |___ / ___ \|  _ <| |_| |
+#|____/|_____/_/   \_\_____| /_/   \_\  \____/_/   \_\_| \_\____/ 
+#                                                                 
+
+function deal_a_card {
+
+card=$(cat 4deckshuf | head -1)
+
+#prints card
+eval "$card"
+
+#deletes card at top of deck
+sed -i '1d' 4deckshuf
+
+}
+
+# _   _ _   _ __  __    ___  _____    ____    _    ____  ____  ____  
+#| \ | | | | |  \/  |  / _ \|  ___|  / ___|  / \  |  _ \|  _ \/ ___| 
+#|  \| | | | | |\/| | | | | | |_    | |     / _ \ | |_) | | | \___ \ 
+#| |\  | |_| | |  | | | |_| |  _|   | |___ / ___ \|  _ <| |_| |___) |
+#|_| \_|\___/|_|  |_|  \___/|_|      \____/_/   \_\_| \_\____/|____/ 
+#                                                                    
+
+function num_of_cards {
+
+num_of_lines=$(cat 4deckshuf | wc -l)
+
+if [[ "$num_of_lines" -lt "2" ]] 
+then
+echo "" > player1
+echo "" > dealer 
+shuf 4_deck_linenums > 4deckshuf
+fi
+
+}
+
+
+function ask_tpa {
+echo "Would you like to play again? yn"
+read yn
+
+if [[ "$yn" == y ]] 
+then
+deal
+else
+exit
+fi
+fi
+}
+
+
+
+
+# ___ _   _ ____  _   _ ____      _    _   _  ____ _____ 
+#|_ _| \ | / ___|| | | |  _ \    / \  | \ | |/ ___| ____|
+# | ||  \| \___ \| | | | |_) |  / _ \ |  \| | |   |  _|  
+# | || |\  |___) | |_| |  _ <  / ___ \| |\  | |___| |___ 
+#|___|_| \_|____/ \___/|_| \_\/_/   \_\_| \_|\____|_____|
+#                                                        
+
+function ask_for_insurance {
+
+
+echo "Would you like insurance? y n"
+read yn
+
+if [[ yn == "y" ]]
+then
+#put more money in
+echo "put more money in"
+fi
+
+if [[ "$total_of_dealers_cards" == "21" ]]
+then
+
+clear
+
+echo "Dealer"
+echo
+paste <(echo "$d_card1") <(echo "$d_card2") | sed 's/	//g'
+#print total of cards only print 1st dealt card
+#expr $num_of_d1 + $num_of_d2
+echo "Total: total_of_dealers_cards"
+
+echo
+echo
+echo "Player1"
+echo
+paste <(echo "$p1_card1") <(echo "$p1_card2") | sed 's/	//g'
+#print total of cards
+echo "Total: $total_of_player1_cards"
+
+
+
+
+figlet "YOU LOSE!!!"
+else
+menu
+fi
+
+echo "Would you like to play again?"
+read yn
+
+if [[ "$yn" == y ]] 
+then
+deal
+fi
+
+}
+
+
+
+
+
+
+
+
+# ____  _____    _    _     
+#|  _ \| ____|  / \  | |    
+#| | | |  _|   / _ \ | |    
+#| |_| | |___ / ___ \| |___ 
+#|____/|_____/_/   \_\_____|
+#                           
+
+function deal {
+
+num_of_cards
+
+echo "" > player1
+echo "" > dealer
+
+clear
+
+
+
+#deals card to player 1
+deal_a_card > player1
+
+#deals card to dealer
+deal_a_card > dealer
+
+deal_a_card >> player1
+
+deal_a_card >> dealer
+
+
+
+p1_card1=$(cat player1 | sed -n "1,6 p")
+p1_card2=$(cat player1 | sed -n "7,12 p")
+
+d_card1=$(cat dealer | sed -n "1,6 p")
+d_card2=$(cat dealer | sed -n "7,12 p")
+
+#dealer card flipped over
+d_cardf=$(cat dealercardf)
+
+
+
+#get numbers of cards
+num_of_c1=$(echo "$p1_card1" | sed -n '2p' | sed 's/[|. /\_]//g' | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/11/g')
+num_of_c2=$(echo "$p1_card2" | sed -n '2p' | sed 's/[|. /\_]//g' | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/11/g')
+
+num_of_d1=$(echo "$d_card1" | sed -n '2p' | sed 's/[|. /\_]//g'| sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/11/g')
+
+check_A_d1=$(echo "$d_card1" | sed -n '2p' | sed 's/[|. /\_]//g'| sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g')
+
+num_of_d2=$(echo "$d_card2" | sed -n '2p' | sed 's/[|. /\_]//g'| sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/11/g')
+
+
+
+
+
+total_of_player1_cards=$(expr $num_of_c1 + $num_of_c2)
+total_of_dealers_cards=$(expr $num_of_d1 + $num_of_d2)
+
+#print cards to terminal
+echo "Dealer"
+echo
+paste <(echo "$d_card1") <(echo "$d_cardf") | sed 's/	//g'
+#print total of cards only print 1st dealt card
+#expr $num_of_d1 + $num_of_d2
+echo "Total: $num_of_d1"
+
+echo
+echo
+echo "Player1"
+echo
+p1cards=$(paste <(echo "$p1_card1") <(echo "$p1_card2") | sed 's/	//g')
+echo "$p1cards"
+#print total of cards
+echo "Total: $total_of_player1_cards"
+
+
+
+
+
+#ask for insurance if dealer shows an A card up
+if [[ "$check_A_d1" == "A" ]]
+then
+ask_for_insurance
+else
+menu
+fi
+
+
+
+}
+
+# _   _ ___ _____ 
+#| | | |_ _|_   _|
+#| |_| || |  | |  
+#|  _  || |  | |  
+#|_| |_|___| |_|  
+#                 
+
+function hit {
+
+deal_a_card >> player1
+
+p1_card3=$(cat player1 | sed -n "13,18 p")
+p1_card4=$(cat player1 | sed -n "19,24 p")
+p1_card5=$(cat player1 | sed -n "25,30 p")
+p1_card6=$(cat player1 | sed -n "31,36 p")
+p1_card7=$(cat player1 | sed -n "37,42 p")
+p1_card8=$(cat player1 | sed -n "43,48 p")
+p1_card9=$(cat player1 | sed -n "49,54 p")
+p1_card10=$(cat player1 | sed -n "55,60 p")
+
+
+
+
+#count how many lines there are in p1 file
+p1_tl=$(cat player1 | wc -l)
+
+#divide by 6 lines to get total cards
+total_cards=$(expr $p1_tl / 6)
+
+
+#filter for variable to execute
+num_of_card=$(echo "echo \"\$p1_card$total_cards\" | sed -n '2p' | sed 's/[|. /\_]//g'")
+
+card=$(echo "echo \"\$p1_card$total_cards\"")
+
+#prints card to output
+printcard=$(eval "$card") 
+
+#prints total to output
+print_t_of_card=$(eval "$num_of_card") 
+
+
+
+
+loop=$(
+count=0
+
+for i in $(seq $total_cards)
+do
+
+let count=count+1
+card=$(echo "echo \"\$p1_card$count\"")
+
+#print card
+p_card=$(eval "$card")
+
+
+#paste <(echo "$p_card")
+#echo -e "$p_card"
+
+
+echo -n "<(echo \"\$p1_card$count\") "
+
+
+done
+)
+
+
+
+
+#get number of cards
+total_numbers=$(
+for i in $(seq $total_cards)
+do
+
+
+
+#total_of_player1_cards=$(expr $num_of_c1 + $num_of_c2)
+#num_of_card=$(
+echo "echo \"\$p1_card$i\" | sed -n '2p' | sed 's/[|. /\_]//g'"
+
+
+done
+
+)
+
+#check for ACE
+check_A=$(eval "$total_numbers" | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' )
+
+#print total numbers variable
+print_tn=$(eval "$total_numbers" | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/11/g')
+
+#print total of numbers
+total_of_player1_cards=$(echo "$print_tn" | awk '{ sum += $1 } END { print sum }')
+
+p1cards=$(eval paste "$loop" | sed 's/	//g')
+
+if [[ "$check_A" == *"A"* ]] && [[ "$total_of_player1_cards" -gt "21" ]]
+then
+
+#ca=$(eval "$total_numbers" | sed 's/A/1/g')
+
+print_tn=$(eval "$total_numbers" | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/1/g')
+total_of_player1_cards=$(echo "$print_tn" | awk '{ sum += $1 } END { print sum }')
+
+fi
+
+clear
+
+ 
+#print dealer cards
+echo "Dealer"
+echo
+paste <(echo "$d_card1") <(echo "$d_cardf") | sed 's/	//g'
+echo "Total: $num_of_d1"
+ 
+ 
+echo
+echo
+echo "Player 1"
+#print cards player1
+echo "$p1cards"
+
+
+echo "Total: $total_of_player1_cards"
+
+
+
+
+#check if over 21
+if [[ "$total_of_player1_cards" -gt "21" ]]
+then
+figlet "BUSTED!!!"
+
+echo
+echo "Would you like to start a new game? yn"
+read yn
+
+else 
+menu
+fi
+
+if [[ "$yn" == "y" ]]
+then
+deal
+else
+exit
+fi
+
+
+}
+
+
+
+function dealers_turn2 {
+
+
+#deals a card    
+deal_a_card >> dealer
+
+
+d_card3=$(cat dealer | sed -n "13,18 p")
+d_card4=$(cat dealer | sed -n "19,24 p")
+d_card5=$(cat dealer | sed -n "25,30 p")
+d_card6=$(cat dealer | sed -n "31,36 p")
+d_card7=$(cat dealer | sed -n "37,42 p")
+d_card8=$(cat dealer | sed -n "43,48 p")
+d_card9=$(cat dealer | sed -n "49,54 p")
+d_card10=$(cat dealer | sed -n "55,60 p")
+
+
+
+
+#count total cards dealt
+#count how many lines there are in p1 file
+p1_tld=$(cat dealer | wc -l)
+
+#divide by 6 lines to get total cards
+total_cardsd=$(expr $p1_tld / 6)
+
+#filter for variable to execute
+num_of_cardd=$(echo "echo \"\$d_card$total_cardsd\" | sed -n '2p' | sed 's/[|. /\_]//g'")
+
+cardd=$(echo "echo \"\$d_card$total_cardsd\"")
+
+#prints card to output
+printcardd=$(eval "$cardd") 
+
+#prints total to output
+print_t_of_cardd=$(eval "$num_of_cardd") 
+
+
+
+
+
+loopd=$(
+count=0
+
+for i in $(seq $total_cardsd)
+do
+
+let count=count+1
+dcard=$(echo "echo \"\$d_card$count\"")
+
+#print card
+p_card=$(eval "$dcard")
+
+
+#paste <(echo "$p_card")
+#echo -e "$p_card"
+
+
+echo -n "<(echo \"\$d_card$count\") "
+
+
+done
+)
+
+
+
+#get number of cards
+total_numbersd=$(
+for i in $(seq $total_cardsd)
+do
+
+
+
+#total_of_player1_cards=$(expr $num_of_c1 + $num_of_c2)
+#num_of_card=$(
+echo "echo \"\$d_card$i\" | sed -n '2p' | sed 's/[|. /\_]//g'"
+
+
+done
+
+)
+
+
+#check for ACE
+check_A=$(eval "$total_numbersd" | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' )
+
+#print total numbers variable
+print_tn=$(eval "$total_numbersd" | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/11/g')
+
+#print total of numbers
+total_of_dealers_cards=$(echo "$print_tn" | awk '{ sum += $1 } END { print sum }')
+
+dcards=$(eval paste "$loopd" | sed 's/	//g')
+
+if [[ "$check_A" == *"A"* ]] && [[ "$total_of_dealers_cards" -gt "21" ]]
+then
+
+#ca=$(eval "$total_numbers" | sed 's/A/1/g')
+
+print_tn=$(eval "$total_numbersd" | sed 's/K/10/g' | sed 's/Q/10/g' | sed 's/J/10/g' | sed 's/A/1/g')
+total_of_dealers_cards=$(echo "$print_tn" | awk '{ sum += $1 } END { print sum }')
+
+fi
+clear
+
+echo "Dealer"
+echo "$dcards"
+
+echo "Total: $total_of_dealers_cards"
+echo
+echo
+echo "Player1"
+echo "$p1cards"
+echo "Total: $total_of_player1_cards"
+
+
+if [[ "$total_of_dealers_cards" -gt "21" ]]
+then
+figlet "YOU WIN!!!"
+
+ask_tpa
+
+
+compare_to_player1
+
+} 
+
+
+
+
+
+
+
+
+
+#compare totals and get winner of game
+function compare_to_player1 {
+
+
+if [[ "$total_of_dealers_cards" == "$total_of_player1_cards" ]]
+then
+figlet "PUSH!!!"
+ask_tpa
+fi
+
+if [[ "$total_of_dealers_cards" -gt "$total_of_player1_cards" ]]
+then
+figlet "YOU LOSE!!!"
+ask_tpa
+else
+figlet "YOU WIN!!!"
+ask_tpa
+fi
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+# ____  _____    _    _     _____ ____  ____    _____ _   _ ____  _   _ 
+#|  _ \| ____|  / \  | |   | ____|  _ \/ ___|  |_   _| | | |  _ \| \ | |
+#| | | |  _|   / _ \ | |   |  _| | |_) \___ \    | | | | | | |_) |  \| |
+#| |_| | |___ / ___ \| |___| |___|  _ < ___) |   | | | |_| |  _ <| |\  |
+#|____/|_____/_/   \_\_____|_____|_| \_\____/    |_|  \___/|_| \_\_| \_|
+#                                                                       
+
+
+
+
+
+function dealers_turn {
+
+
+
+clear
+
+echo "Dealer"
+echo
+#dealers cards
+dc=$(paste <(echo "$d_card1") <(echo "$d_card2") | sed 's/	//g')
+echo "$dc"
+
+#print total of cards only print 1st dealt card
+#expr $num_of_d1 + $num_of_d2
+echo "Total: $total_of_dealers_cards"
+
+echo
+echo
+echo "Player1"
+echo
+echo "$p1cards"
+
+#print total of cards
+echo "Total: $total_of_player1_cards"
+
+
+if [[ "$total_of_dealers_cards" -lt "16" ]]
+then
+dealers_turn2
+else
+compare_to_player1
+fi
+
+}
+
+
+
+
+
+
+
+
+# __  __ _____ _   _ _   _ 
+#|  \/  | ____| \ | | | | |
+#| |\/| |  _| |  \| | | | |
+#| |  | | |___| |\  | |_| |
+#|_|  |_|_____|_| \_|\___/ 
+#                          
+
+
+
+function menu {
+
+echo
+echo
+echo "what would you like to do?"
+case `select_opt "Hit" "Stand" "Double" "Surrender" ` in
+    0) 
+hit
+choice="player1"
+;;
+    1) 
+#see what Dealer has for total cards
+dealers_turn
+choice="dealer"
+;;
+	2)
+	#double your bet and hit
+	echo
+	;;
+	
+	
+	3)
+	#surrender bet game is over reset
+echo
+
+
+;;
+
+esac
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+deal
+
